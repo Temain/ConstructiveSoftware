@@ -38,10 +38,8 @@ namespace ConstructiveSoftware.Services
 			var dbArea = new Area
 			{
 				Name = area.Name,
-				CreatedOn = area.CreatedOn,
-				CreatedById = area.CreatedById,
-				UpdatedOn = area.UpdatedOn,
-				UpdatedById = area.UpdatedById
+				CreatedOn = DateTime.UtcNow,
+				CreatedById = area.CreatedById
 			};
 
 			await _context.Areas.AddAsync(dbArea, cancellationToken);
@@ -58,9 +56,7 @@ namespace ConstructiveSoftware.Services
 				.SingleOrDefaultAsync(cancellationToken);
 
 			dbArea.Name = area.Name;
-			dbArea.CreatedOn = area.CreatedOn;
-			dbArea.CreatedById = area.CreatedById;
-			dbArea.UpdatedOn = area.UpdatedOn;
+			dbArea.UpdatedOn = DateTime.UtcNow;
 			dbArea.UpdatedById = area.UpdatedById;
 
 			_context.Entry(dbArea).State = EntityState.Modified;

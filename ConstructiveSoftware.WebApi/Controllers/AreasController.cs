@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
-using ConstructiveSoftware.Services;
+using ConstructiveSoftware.Services.Interfaces;
 using ConstructiveSoftware.Services.Models;
 using ConstructiveSoftware.WebApi.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -14,21 +15,28 @@ namespace ConstructiveSoftware.WebApi.Controllers
 	[ApiController]
 	public class AreasController : ControllerBase
 	{
-		private readonly AreaService _areaService;
+		private readonly IAreaService _areaService;
+		private readonly IMapper _mapper;
 
-		public AreasController(AreaService areaService)
+		public AreasController(IAreaService areaService, IMapper mapper)
 		{
 			_areaService = areaService;
+			_mapper = mapper;
 		}
 
 		// GET: api/Areas
 		[HttpGet]
 		public async Task<ActionResult<IEnumerable<VmArea>>> GetAreas(string searchPattern, CancellationToken cancellationToken)
 		{
-			var areas = await _areaService.GetAreas(a => a.Name.Contains(searchPattern))
-				.ToListAsync(cancellationToken);
+			var areasQuery = _areaService.GetAreas();
+			if (!string.IsNullOrWhiteSpace(searchPattern))
+			{
+				areasQuery = areasQuery.Where(a => a.Name.Contains(searchPattern));
+			}
+				
+			var areas = await areasQuery.ToListAsync(cancellationToken);
 
-			var vmAreas = Mapper.Map<IEnumerable<VmArea>>(areas);
+			var vmAreas = _mapper.Map<IEnumerable<VmArea>>(areas);
 
 			return Ok(vmAreas);
 		}
@@ -44,28 +52,26 @@ namespace ConstructiveSoftware.WebApi.Controllers
 				return NotFound();
 			}
 
-			return Ok(area);
+			var vmArea = _mapper.Map<VmArea>(area);
+
+			return Ok(vmArea);
 		}
 
 		// PUT: api/Areas/5
 		[HttpPut("{id}")]
-		public async Task<IActionResult> PutArea(int id, AreaView area, CancellationToken cancellationToken)
+		public async Task<IActionResult> PutArea([FromRoute]int id, [FromBody]VmArea vmArea, CancellationToken cancellationToken)
 		{
-			if (id != area.Id)
+			if (id != vmArea.Id)
 			{
 				return BadRequest();
 			}
 
-			var areaView = await _areaService.GetAreas(a => a.Id == id)
-				.SingleOrDefaultAsync(cancellationToken);
-			if (areaView == null)
-			{
-				return NotFound();
-			}
+			var areaView = _mapper.Map<AreaView>(vmArea);
+			areaView.UpdatedById = 1; // Hardcode Admin
+			await _areaService.UpdateAreaAsync(areaView, cancellationToken);
 
 			try
 			{
-				await _areaService.UpdateAreaAsync(areaView, cancellationToken);
 				await _areaService.CommitAsync(cancellationToken);
 			}
 			catch (DbUpdateConcurrencyException)
@@ -85,22 +91,15 @@ namespace ConstructiveSoftware.WebApi.Controllers
 
 		// POST: api/Areas
 		[HttpPost]
-		public async Task<ActionResult<VmArea>> PostArea(AreaView area, CancellationToken cancellationToken)
+		public async Task<ActionResult<VmArea>> PostArea([FromBody]VmArea vmArea, CancellationToken cancellationToken)
 		{
-			var dbArea = await _areaService.AddAreaAsync(area, cancellationToken);
+			var areaView = _mapper.Map<AreaView>(vmArea);
+			areaView.CreatedById = 1; // Hardcode Admin
+			var dbArea = await _areaService.AddAreaAsync(areaView, cancellationToken);
 			await _areaService.CommitAsync(cancellationToken);
 
-			var areaId = dbArea.Id;
-			var areaView = await _areaService.GetAreas(a => a.Id == areaId)
-				.SingleOrDefaultAsync(cancellationToken);
-			if (areaView == null)
-			{
-				return NotFound();
-			}
-
-			var vmArea = Mapper.Map<VmArea>(areaView);
-
-			return CreatedAtAction("GetArea", new { id = areaId }, vmArea);
+			vmArea.Id = dbArea.Id;
+			return CreatedAtAction("GetArea", new { id = dbArea.Id }, vmArea);
 		}
 
 		// DELETE: api/Areas/5
@@ -117,9 +116,9 @@ namespace ConstructiveSoftware.WebApi.Controllers
 			var areaView = await _areaService.DeleteAreaAsync(id, cancellationToken);
 			await _areaService.CommitAsync(cancellationToken);
 
-			var vmArea = Mapper.Map<VmArea>(area);
+			var vmArea = _mapper.Map<VmArea>(area);
 
-			return vmArea;
+			return Ok(vmArea);
 		}
 
 		private async Task<bool> AreaExists(int id, CancellationToken cancellationToken)
