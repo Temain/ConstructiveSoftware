@@ -7,7 +7,8 @@ namespace ConstructiveSoftware.Domain
 	{
 		public DbSet<Area> Areas { get; set; }
 
-		public ApplicationDbContext()
+		public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
 		{
 
 		}
