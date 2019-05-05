@@ -31,7 +31,7 @@ namespace ConstructiveSoftware.WebApi
 				options.AddPolicy("AllowSpecificMethods",
 					option =>
 					{
-						option.WithOrigins("http://localhost:4200")
+						option.WithOrigins("http://localhost:8080")
 							.AllowAnyMethod()
 							.AllowCredentials()
 							.AllowAnyHeader();
@@ -39,7 +39,8 @@ namespace ConstructiveSoftware.WebApi
 			});
 
 			var connection = Configuration.GetConnectionString("DefaultConnection");
-			services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connection));
+			services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connection
+				, b => b.MigrationsAssembly("ConstructiveSoftware.Migrations")));
 
 			// Add application services.
 			services.AddTransient<IAreaService, AreaService>();

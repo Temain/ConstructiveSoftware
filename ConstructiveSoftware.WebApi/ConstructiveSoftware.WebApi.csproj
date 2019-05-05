@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ConstructiveSoftware.Domain\ConstructiveSoftware.Domain.csproj" />
+    <ProjectReference Include="..\ConstructiveSoftware.Migrations\ConstructiveSoftware.Migrations.csproj" />
     <ProjectReference Include="..\ConstructiveSoftware.Services\ConstructiveSoftware.Services.csproj" />
   </ItemGroup>
 
